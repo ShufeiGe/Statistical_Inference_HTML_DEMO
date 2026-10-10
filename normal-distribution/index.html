@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sampling Distribution Demo</title>
+
+  <link rel="stylesheet" href="./style.css">
+  <script src="./script.js" defer></script>
+</head>
+
+<body>
+  <div class="container">
+    <h1>Sampling Distribution Demo</h1>
+    <div class="subtitle">
+      正态总体下，探索样本均值 X̄ 与标准化样本方差
+      Q = (n − 1)S² / σ² 的抽样分布。
+    </div>
+
+    <form id="controls" class="controls">
+      <div class="field">
+        <label for="n">样本量 n</label>
+        <input id="n" type="number" value="10"
+               min="2" max="200" step="1" required>
+      </div>
+
+      <div class="field">
+        <label for="B">模拟次数 B</label>
+        <input id="B" type="number" value="10000"
+               min="100" max="50000" step="1" required>
+      </div>
+
+      <div class="field">
+        <label for="mu">总体均值 μ</label>
+        <input id="mu" type="number" value="2"
+               min="-1000000" max="1000000" step="any" required>
+      </div>
+
+      <div class="field">
+        <label for="sigma">总体标准差 σ</label>
+        <input id="sigma" type="number" value="3"
+               min="0.001" max="1000000" step="any" required>
+      </div>
+
+      <div class="field">
+        <label for="seed">随机种子</label>
+        <input id="seed" type="number" value="123"
+               min="0" max="4294967295" step="1" required>
+      </div>
+
+      <button id="run" type="submit">重新模拟</button>
+      <button id="newSeed" class="secondary" type="button">
+        更换随机种子
+      </button>
+    </form>
+
+    <div id="status" class="status" role="status"></div>
+
+    <div class="grid">
+      <!-- 第一栏：理论 -->
+      <section class="panel">
+        <h2>① 理论结果</h2>
+
+        <p>X₁, …, Xₙ 独立同分布于 N(μ, σ²)。</p>
+
+        <h3>样本均值</h3>
+        <div class="formula">
+          X̄ ∼ N(μ, σ²/n)
+          <div id="meanTheory"></div>
+        </div>
+        <div class="note">这里 N 的第二个参数表示方差。</div>
+
+        <h3>标准化样本方差</h3>
+        <div class="formula">
+          Q = (n − 1)S²/σ² ∼ χ²(n − 1)
+          <div id="varianceTheory"></div>
+        </div>
+        <div class="note">
+          S² 使用 n − 1 作为分母。<br>
+          E(Q) = n − 1；Var(Q) = 2(n − 1)。
+        </div>
+
+        <h3>独立性</h3>
+        <div class="formula">
+          X̄ 与 S² 独立<br>
+          Corr(X̄, Q) = 0
+        </div>
+        <div class="note">
+          这是正态样本的性质。有限次模拟的经验相关系数通常不会恰好为 0。
+        </div>
+      </section>
+
+      <!-- 第二栏：代码 -->
+      <section class="panel">
+        <h2>② 对应 R 代码</h2>
+        <pre><code id="rCode"></code></pre>
+        <p class="note">
+          页面实际使用 JavaScript 生成正态样本；
+          这里展示等价的 R 模拟流程。
+          随机数生成器与 R 不同，因此相同种子不代表逐次模拟结果相同。
+        </p>
+      </section>
+
+      <!-- 第三栏：结果 -->
+      <section class="panel results">
+        <h2>③ 模拟结果</h2>
+
+        <canvas id="meanPlot"
+                aria-label="样本均值直方图及理论正态密度"></canvas>
+        <canvas id="variancePlot"
+                aria-label="标准化样本方差直方图及理论卡方密度"></canvas>
+
+        <div class="legend">
+          <span><i class="swatch"></i>模拟密度直方图</span>
+          <span><i class="line"></i>理论密度</span>
+        </div>
+
+        <table>
+          <thead>
+            <tr>
+              <th>统计量</th>
+              <th>经验值</th>
+              <th>理论值</th>
+            </tr>
+          </thead>
+          <tbody id="stats"></tbody>
+        </table>
+
+        <div class="correlation">
+          <strong>经验相关系数：</strong>
+          <span id="corr"></span>
+          <div class="note">
+            理论值为 0。增大 B 通常使模拟估计更稳定，
+            但误差不保证随每次增大 B 而单调减小。
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <section class="panel discussion">
+      <strong>探索问题</strong>
+      <ol>
+        <li>增大 n 后，样本均值的分布是否更集中？</li>
+        <li>改变 μ 后，哪幅图的位置发生变化？</li>
+        <li>改变 σ 后，X̄ 的分布如何变化？Q 的理论分布是否改变？</li>
+        <li>增大 B 后，直方图和理论曲线是否更吻合？</li>
+      </ol>
+    </section>
+  </div>
+</body>
+</html>
