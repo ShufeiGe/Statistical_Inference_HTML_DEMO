@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Student's t vs Standard Normal</title>
+
+  <link rel="stylesheet" href="./style.css">
+  <script src="./script.js" defer></script>
+</head>
+<body>
+  <div class="container">
+    <h1>Why Does the t Distribution Have Heavier Tails?</h1>
+    <p class="subtitle">
+      从正态总体反复抽样，比较使用已知 σ 与使用估计值 S 的标准化结果。
+    </p>
+
+    <form id="controls" class="card controls">
+      <div class="field">
+        <label for="n">样本量 n</label>
+        <input id="n" type="number" min="2" max="500"
+               step="1" value="10" required>
+      </div>
+
+      <div class="field">
+        <label for="B">模拟次数 B</label>
+        <input id="B" type="number" min="100" max="50000"
+               step="1" value="10000" required>
+      </div>
+
+      <div class="field">
+        <label for="mu">总体均值 μ</label>
+        <input id="mu" type="number" min="-1000000" max="1000000"
+               step="any" value="2" required>
+      </div>
+
+      <div class="field">
+        <label for="sigma">总体标准差 σ</label>
+        <input id="sigma" type="number" min="0.000001" max="1000000"
+               step="any" value="3" required>
+      </div>
+
+      <div class="field">
+        <label for="seed">随机种子</label>
+        <input id="seed" type="number" min="0" max="4294967295"
+               step="1" value="123" required>
+      </div>
+
+      <div class="field">
+        <label for="range">Z / T 图横轴范围 ±</label>
+        <input id="range" type="number" min="3" max="30"
+               step="1" value="6" required>
+      </div>
+
+      <button type="submit">重新模拟</button>
+      <button id="newSeed" type="button" class="secondary">
+        更换种子
+      </button>
+    </form>
+
+    <div class="card formula">
+      X₁, …, Xₙ 独立同分布于 N(μ, σ²)<br>
+      Z = (X̄ − μ)/(σ/√n) ∼ N(0, 1)<br>
+      T = (X̄ − μ)/(S/√n) = Z/(S/σ) ∼ t<sub>n−1</sub><br>
+      <span id="theory"></span>
+    </div>
+
+    <p id="status" class="note" role="status"></p>
+
+    <div class="grid">
+      <section class="card">
+        <h2>① Z 与 T：直方图及理论密度</h2>
+
+        <canvas
+          id="ztPlot"
+          aria-label="Z和T的密度直方图及理论曲线">
+        </canvas>
+
+        <div class="legend">
+          <span><i class="key blue"></i>Z 直方图</span>
+          <span><i class="key orange"></i>T 直方图</span>
+          <span><i class="key blue-line"></i>N(0,1) 密度</span>
+          <span><i class="key orange-line"></i>t 密度</span>
+        </div>
+
+        <p id="outside" class="note"></p>
+
+        <p class="note">
+          为便于比较中心与尾部，横轴采用指定范围。
+          范围外的观测未显示，但仍计入统计量；
+          直方图密度以全部 B 次模拟归一化。
+        </p>
+      </section>
+
+      <section class="card">
+        <h2>② 样本标准差 S</h2>
+
+        <canvas
+          id="sPlot"
+          aria-label="样本标准差直方图和总体标准差参考线">
+        </canvas>
+
+        <div class="legend">
+          <span><i class="key green"></i>S 直方图</span>
+          <span><i class="key red-line"></i>总体标准差 σ</span>
+        </div>
+
+        <p id="smallS" class="note"></p>
+
+        <p class="note">
+          当 S 比 σ 小时，|T| = |Z|/(S/σ) 比 |Z| 大。
+          随着 n 增大，S 更集中于 σ 附近，T 的分布更接近 Z。
+        </p>
+      </section>
+    </div>
+
+    <section class="card">
+      <h2>③ 经验统计量与理论结果</h2>
+
+      <div class="scroll">
+        <table>
+          <thead>
+            <tr>
+              <th>变量</th>
+              <th>经验均值</th>
+              <th>理论均值</th>
+              <th>经验方差</th>
+              <th>理论方差</th>
+            </tr>
+          </thead>
+          <tbody id="stats"></tbody>
+        </table>
+      </div>
+
+      <div id="correlations" class="correlations"></div>
+      <p id="momentNote" class="note"></p>
+
+      <p class="note">
+        表中经验方差使用 B − 1 作为分母。
+        Z 与 S 独立；T 使用 S 构造，因此 T 与 S 一般不独立。
+        当 n ≥ 4 时，它们的理论 Pearson 相关系数仍为 0：
+        零相关不等于独立。
+      </p>
+    </section>
+
+    <section class="card">
+      <h2>探索问题</h2>
+
+      <ul>
+        <li>将 n 改为 2、5、10、30，观察 T 的尾部如何变化。</li>
+        <li>增大 B，比较经验密度与理论曲线的吻合程度。</li>
+        <li>固定种子，只改变 μ：哪些图和统计量保持不变？</li>
+        <li>固定种子，只改变 σ：S 的分布如何变化？Z 与 T 是否改变？</li>
+        <li>为什么 T 与 S 的相关系数接近 0，却不能说明它们独立？</li>
+      </ul>
+
+      <p class="note">
+        固定 n、B 和种子时，改变 μ 或 σ 不改变标准化后的 Z 与 T；
+        S 则随 σ 成比例变化。这体现了正态模型的位置与尺度不变性。
+      </p>
+    </section>
+  </div>
+</body>
+</html>
