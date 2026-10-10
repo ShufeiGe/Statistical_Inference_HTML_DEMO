@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>95% Confidence Interval Demo</title>
+
+  <link rel="stylesheet" href="./style.css">
+  <script src="./script.js" defer></script>
+</head>
+
+<body>
+<div class="container">
+  <h1>Confidence Interval for a Normal Mean</h1>
+
+  <p class="subtitle">
+    从正态总体重复抽样，观察每次构造的 95% 置信区间是否包含真实均值 μ。
+    模拟使用 μ 和 σ 生成样本，但构造区间时仅使用样本均值 X̄ 和样本标准差 S。
+  </p>
+
+  <form id="controls" class="card controls">
+    <div class="field">
+      <label for="n">样本量 n</label>
+      <input id="n" type="number"
+             min="2" max="1000" step="1" value="10" required>
+    </div>
+
+    <div class="field">
+      <label for="B">模拟次数 B</label>
+      <input id="B" type="number"
+             min="1" max="100000" step="1" value="1000" required>
+    </div>
+
+    <div class="field">
+      <label for="mu">总体均值 μ</label>
+      <input id="mu" type="number"
+             min="-1000000" max="1000000"
+             step="any" value="2" required>
+    </div>
+
+    <div class="field">
+      <label for="sigma">总体标准差 σ</label>
+      <input id="sigma" type="number"
+             min="0.000001" max="1000000"
+             step="any" value="3" required>
+    </div>
+
+    <div class="field">
+      <label for="seed">随机种子</label>
+      <input id="seed" type="number"
+             min="0" max="4294967295"
+             step="1" value="123" required>
+    </div>
+
+    <button type="submit">重新模拟</button>
+    <button id="newSeed" type="button" class="secondary">
+      更换随机种子
+    </button>
+  </form>
+
+  <div class="card">
+    <div class="formula">
+      X₁, …, Xₙ 独立同分布于 N(μ, σ²)
+      <br>
+      (X̄ − μ)/(S/√n) ∼ t<sub>n−1</sub>
+      <br>
+      <strong>95% CI：</strong>
+      [X̄ − t<sub>0.975,n−1</sub>S/√n,
+       X̄ + t<sub>0.975,n−1</sub>S/√n]
+    </div>
+    <p id="critical" class="note"></p>
+  </div>
+
+  <div id="status" class="note" role="status" aria-live="polite"></div>
+
+  <div class="card">
+    <h2>全部模拟的统计结果</h2>
+
+    <div class="stats">
+      <div class="stat">
+        <div class="stat-label">经验覆盖率 · 理论值 95%</div>
+        <div id="coverage" class="stat-value">—</div>
+      </div>
+
+      <div class="stat">
+        <div class="stat-label">包含 μ 的区间数</div>
+        <div id="covered" class="stat-value">—</div>
+      </div>
+
+      <div class="stat">
+        <div class="stat-label">未包含 μ 的区间数</div>
+        <div id="missed" class="stat-value">—</div>
+      </div>
+
+      <div class="stat">
+        <div class="stat-label">平均区间长度</div>
+        <div id="length" class="stat-value">—</div>
+      </div>
+    </div>
+
+    <p id="mcError" class="note"></p>
+  </div>
+
+  <div class="card">
+    <h2>重复抽样得到的 95% 置信区间</h2>
+
+    <div class="plot-controls">
+      <div class="field shown-field">
+        <label for="shown">展示区间数（1 到 B）</label>
+        <input id="shown" type="number"
+               min="1" max="1000" step="1" value="100">
+      </div>
+
+      <button id="showAll" type="button">展示全部 B 条</button>
+      <button id="backTop" type="button" class="secondary">
+        回到顶部
+      </button>
+    </div>
+
+    <p id="displayMode" class="note"></p>
+
+    <div class="legend">
+      <span><i class="key blue"></i>包含 μ</span>
+      <span><i class="key red"></i>未包含 μ</span>
+      <span><i class="key green"></i>真实均值 μ</span>
+      <span>● 样本均值 X̄</span>
+    </div>
+
+    <div id="plotScroll" tabindex="0"
+         aria-label="置信区间图；可上下滚动查看模拟结果">
+      <div id="plotSpace">
+        <canvas id="plot" role="img"
+                aria-label="重复模拟的置信区间与真实均值参考线"></canvas>
+      </div>
+    </div>
+
+    <p id="plotNote" class="note"></p>
+    <p id="visibleNote" class="note"></p>
+
+    <p class="note">
+      每条横线代表一次模拟的置信区间，圆点代表样本均值。
+      上下滚动可查看全部选中的区间。
+      所有选中区间使用统一横轴，横轴范围不会随着滚动改变。
+    </p>
+  </div>
+
+  <div class="card">
+    <h2>如何解释 95% 置信水平？</h2>
+
+    <div class="interpretation">
+      如果不断重复“抽取样本并构造区间”的过程，
+      长期来看约 95% 的区间会包含固定的真实均值 μ。
+      <strong>区间是随机的，μ 是固定的。</strong>
+      对已经得到的某个区间，它要么包含 μ，要么不包含 μ；
+      不能把频率学派的 95% 置信水平解释为
+      “μ 有 95% 的概率落在这个已观测区间内”。
+    </div>
+
+    <ul>
+      <li>增大 n：区间通常更短，但理论覆盖率仍为 95%。</li>
+      <li>增大 B：经验覆盖率通常更稳定，但不保证单调接近 95%。</li>
+      <li>改变 μ：区间与参考竖线一起平移。</li>
+      <li>改变 σ：区间宽度随之成比例变化。</li>
+      <li>
+        固定 n、B 和种子，只改变 μ 或 σ：哪些区间包含 μ 的结果保持不变。
+      </li>
+    </ul>
+
+    <p class="note">
+      页面会随所展示的区间自动调整横轴范围。
+      因此比较 σ 对区间宽度的影响时，也请观察横轴刻度和平均区间长度。
+    </p>
+  </div>
+</div>
+</body>
+</html>
