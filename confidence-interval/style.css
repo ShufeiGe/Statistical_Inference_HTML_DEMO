@@ -1,0 +1,227 @@
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  padding: 24px;
+  background: #f1f5f9;
+  color: #1e293b;
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+.container {
+  max-width: 1200px;
+  margin: auto;
+}
+
+h1 {
+  margin: 0 0 10px;
+  font-size: 28px;
+}
+
+h2 {
+  margin: 0 0 15px;
+  font-size: 19px;
+}
+
+.subtitle,
+.note {
+  color: #64748b;
+  line-height: 1.7;
+}
+
+.note {
+  font-size: 13px;
+}
+
+.card {
+  padding: 20px;
+  margin-bottom: 18px;
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+}
+
+.controls,
+.plot-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  align-items: flex-end;
+}
+
+.field {
+  flex: 1 1 130px;
+}
+
+/* 原 HTML 中的内联样式 */
+.shown-field {
+  max-width: 260px;
+}
+
+label {
+  display: block;
+  margin-bottom: 7px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+input {
+  width: 100%;
+  padding: 9px;
+  border: 1px solid #cbd5e1;
+  border-radius: 7px;
+  background: white;
+  font-size: 15px;
+}
+
+button {
+  padding: 11px 16px;
+  border: 0;
+  border-radius: 7px;
+  background: #2563eb;
+  color: white;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+button:hover {
+  opacity: .9;
+}
+
+button.secondary {
+  background: #475569;
+}
+
+.formula {
+  padding: 16px;
+  border-radius: 9px;
+  background: #eff6ff;
+  text-align: center;
+  line-height: 1.9;
+  font-size: 17px;
+}
+
+.stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+}
+
+.stat {
+  padding: 16px;
+  background: #f8fafc;
+  border-radius: 9px;
+}
+
+.stat-label {
+  color: #64748b;
+  font-size: 13px;
+}
+
+.stat-value {
+  margin-top: 7px;
+  font-size: 24px;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+#coverage {
+  color: #2563eb;
+}
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 20px;
+  margin: 16px 0;
+  color: #475569;
+  font-size: 13px;
+}
+
+.key {
+  display: inline-block;
+  width: 22px;
+  margin-right: 6px;
+  vertical-align: middle;
+  border-top: 3px solid;
+}
+
+.blue {
+  border-color: #2563eb;
+}
+
+.red {
+  border-color: #dc2626;
+}
+
+.green {
+  border-color: #059669;
+  border-top-style: dashed;
+}
+
+#plotScroll {
+  position: relative;
+  height: 620px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: white;
+}
+
+#plotSpace {
+  position: relative;
+  width: 100%;
+}
+
+#plot {
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: block;
+  width: 100%;
+}
+
+#status {
+  min-height: 24px;
+  margin: 10px 0 18px;
+}
+
+.interpretation {
+  padding: 15px;
+  border-left: 4px solid #2563eb;
+  border-radius: 5px;
+  background: #eff6ff;
+  line-height: 1.8;
+}
+
+ul {
+  line-height: 1.9;
+}
+
+@media (max-width: 750px) {
+  .stats {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 550px) {
+  body {
+    padding: 12px;
+  }
+
+  h1 {
+    font-size: 23px;
+  }
+
+  .stat-value {
+    font-size: 20px;
+  }
+
+  #plotScroll {
+    height: 480px;
+  }
+}
