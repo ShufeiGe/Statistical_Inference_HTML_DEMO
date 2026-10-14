@@ -1,6 +1,5 @@
 "use strict";
 
-const distributionInput = document.getElementById("distribution");
 const nInput = document.getElementById("sampleSize");
 const bInput = document.getElementById("simulationCount");
 const seedInput = document.getElementById("seedInput");
@@ -12,20 +11,21 @@ const runButton = document.getElementById("runButton");
 const onceButton = document.getElementById("onceButton");
 const resetButton = document.getElementById("resetButton");
 
-const data = {
-  min: [],
-  median: [],
-  max: [],
-  range: []
+const TYPES = ["min", "median", "max", "range"];
+const DISTRIBUTIONS = ["u", "n"];
+const SQRT_2PI = Math.sqrt(2 * Math.PI);
+
+const results = {
+  u: { min: [], median: [], max: [], range: [] },
+  n: { min: [], median: [], max: [], range: [] }
 };
 
-let currentParameters = null;
+let currentN = null;
+let currentSeed = null;
 let random = null;
 let busy = false;
 
-const SQRT_2PI = Math.sqrt(2 * Math.PI);
-
-/* ---------- 带种子的伪随机数 ---------- */
+/* ==================== 带种子的随机数 ==================== */
 
 function mulberry32(seed) {
   let state = seed >>> 0;
@@ -51,7 +51,7 @@ function makeRandom(seed) {
       return value;
     }
 
-    const u1 = 1 - uniform(); // 避免 log(0)
+    const u1 = 1 - uniform();
     const u2 = uniform();
     const radius = Math.sqrt(-2 * Math.log(u1));
     const angle = 2 * Math.PI * u2;
@@ -60,7 +60,7 @@ function makeRandom(seed) {
     return radius * Math.cos(angle);
   }
 
-  // Marsaglia–Tsang Gamma(shape, 1)；本程序中 shape >= 1。
+  // Marsaglia–Tsang Gamma(shape, 1) 抽样。
   function gamma(shape) {
     const d = shape - 1 / 3;
     const c = 1 / Math.sqrt(9 * d);
@@ -74,9 +74,7 @@ function makeRandom(seed) {
       const v = v0 ** 3;
       const u = uniform();
 
-      if (u < 1 - 0.0331 * z ** 4) {
-        return d * v;
-      }
+      if (u < 1 - 0.0331 * z ** 4) return d * v;
 
       if (
         Math.log(u) <
@@ -93,16 +91,16 @@ function makeRandom(seed) {
     return x / (x + y);
   }
 
-  return { uniform, normal, beta };
+  return { uniform, beta };
 }
 
-/* ---------- 标准正态 PDF、CDF 和分位数 ---------- */
+/* ==================== 正态分布函数 ==================== */
 
 function normalPDF(x) {
   return Math.exp(-x * x / 2) / SQRT_2PI;
 }
 
-// 标准正态 CDF 的数值近似。
+// 标准正态 CDF 数值近似。
 function normalCDF(x) {
   const a = Math.abs(x);
   const t = 1 / (1 + 0.2316419 * a);
@@ -120,17 +118,12 @@ function normalCDF(x) {
     );
 
   const upper = normalPDF(a) * polynomial;
-
   return x >= 0 ? 1 - upper : upper;
 }
 
-/*
- * 标准正态分位数的 Acklam 近似。
- * 用于将 Uniform(0,1) 次序统计量映射为正态次序统计量。
- */
+// Acklam 标准正态分位数近似。
 function normalQuantile(p) {
-  const eps = 1e-15;
-  p = Math.max(eps, Math.min(1 - eps, p));
+  p = Math.max(1e-15, Math.min(1 - 1e-15, p));
 
   const a = [
     -3.969683028665376e+01,
@@ -165,12 +158,9 @@ function normalQuantile(p) {
      3.754408661907416e+00
   ];
 
-  const lower = 0.02425;
-  const upper = 1 - lower;
-
-  if (p < lower || p > upper) {
+  if (p < 0.02425 || p > 0.97575) {
     const q = Math.sqrt(
-      -2 * Math.log(p < lower ? p : 1 - p)
+      -2 * Math.log(p < 0.02425 ? p : 1 - p)
     );
 
     const numerator =
@@ -181,8 +171,8 @@ function normalQuantile(p) {
       ((((d[0] * q + d[1]) * q + d[2]) * q +
           d[3]) * q + 1);
 
-    const result = numerator / denominator;
-    return p < lower ? result : -result;
+    const value = numerator / denominator;
+    return p < 0.02425 ? value : -value;
   }
 
   const q = p - 0.5;
@@ -197,7 +187,7 @@ function normalQuantile(p) {
   );
 }
 
-/* ---------- 输入与状态管理 ---------- */
+/* ==================== 参数管理 ==================== */
 
 function readInteger(input, min, max, name) {
   const raw = input.value.trim();
@@ -226,42 +216,27 @@ function readParameters() {
   );
   if (seed === null) return null;
 
-  return {
-    distribution: distributionInput.value,
-    n,
-    seed
-  };
+  return { n, seed };
 }
 
-function sameParameters(a, b) {
-  return (
-    a !== null &&
-    a.distribution === b.distribution &&
-    a.n === b.n &&
-    a.seed === b.seed
-  );
-}
-
-function setControlsDisabled(disabled) {
-  for (const control of [
-    distributionInput,
-    nInput,
-    bInput,
-    seedInput,
-    runButton,
-    onceButton,
-    resetButton
+function setControlsDisabled(value) {
+  for (const element of [
+    nInput, bInput, seedInput,
+    runButton, onceButton, resetButton
   ]) {
-    control.disabled = disabled;
+    element.disabled = value;
   }
 }
 
-function resetWith(parameters) {
-  currentParameters = parameters;
-  random = makeRandom(parameters.seed);
+function resetWith({ n, seed }) {
+  currentN = n;
+  currentSeed = seed;
+  random = makeRandom(seed);
 
-  for (const values of Object.values(data)) {
-    values.length = 0;
+  for (const dist of DISTRIBUTIONS) {
+    for (const type of TYPES) {
+      results[dist][type].length = 0;
+    }
   }
 
   latestEl.textContent = "尚未运行实验。";
@@ -275,38 +250,33 @@ function resetFromInputs() {
   if (parameters !== null) resetWith(parameters);
 }
 
-/* ---------- 模拟 ---------- */
+/* ==================== 两栏配对模拟 ==================== */
 
 /*
- * n <= 30：生成完整样本并排序。
+ * n <= 30：实际生成 n 个均匀数并排序。
+ * 将同一组排序结果通过 Φ⁻¹ 变换，得到正态样本的排序结果。
  */
-function simulateBySorting(n, distribution) {
-  const draw = distribution === "normal"
-    ? random.normal
-    : random.uniform;
-
-  const values = Array.from(
+function simulateBySorting(n) {
+  const sorted = Array.from(
     { length: n },
-    () => draw()
+    () => random.uniform()
   ).sort((a, b) => a - b);
 
   const k = Math.floor((n + 1) / 2);
 
   return {
-    min: values[0],
-    median: values[k - 1],
-    max: values[n - 1],
-    sorted: values
+    uMin: sorted[0],
+    uMedian: sorted[k - 1],
+    uMax: sorted[n - 1],
+    sorted
   };
 }
 
 /*
- * n > 30：先模拟三个 Uniform 次序统计量的精确联合分布，
- * 再用目标分布的分位数函数逐个映射。
- *
- * 单调变换保留次序和联合关系，因此极差也正确。
+ * n > 30：模拟三个均匀次序统计量的精确联合分布。
+ * 再经 Φ⁻¹ 变换得到对应的正态次序统计量。
  */
-function simulateFast(n, distribution) {
+function simulateFast(n) {
   const k = Math.floor((n + 1) / 2);
 
   const uMin =
@@ -317,25 +287,36 @@ function simulateFast(n, distribution) {
     n - k + 1
   );
 
-  const uMiddle =
+  const uMedian =
     uMin + (1 - uMin) * middleFraction;
 
   const upperFraction =
     Math.pow(random.uniform(), 1 / (n - k));
 
   const uMax =
-    uMiddle + (1 - uMiddle) * upperFraction;
+    uMedian + (1 - uMedian) * upperFraction;
 
-  const transform = distribution === "normal"
-    ? normalQuantile
-    : x => x;
+  return { uMin, uMedian, uMax, sorted: null };
+}
 
-  return {
-    min: transform(uMin),
-    median: transform(uMiddle),
-    max: transform(uMax),
-    sorted: null
-  };
+function appendResult(sample) {
+  const { uMin, uMedian, uMax } = sample;
+
+  const nMin = normalQuantile(uMin);
+  const nMedian = normalQuantile(uMedian);
+  const nMax = normalQuantile(uMax);
+
+  results.u.min.push(uMin);
+  results.u.median.push(uMedian);
+  results.u.max.push(uMax);
+  results.u.range.push(uMax - uMin);
+
+  results.n.min.push(nMin);
+  results.n.median.push(nMedian);
+  results.n.max.push(nMax);
+  results.n.range.push(nMax - nMin);
+
+  return { nMin, nMedian, nMax };
 }
 
 function run(count) {
@@ -344,66 +325,57 @@ function run(count) {
   const parameters = readParameters();
   if (parameters === null) return;
 
-  if (!sameParameters(currentParameters, parameters)) {
+  if (
+    parameters.n !== currentN ||
+    parameters.seed !== currentSeed
+  ) {
     resetWith(parameters);
   }
 
   busy = true;
   setControlsDisabled(true);
 
-  let completedInThisRun = 0;
-  let last = null;
+  let completed = 0;
+  let lastSample = null;
+  let lastNormal = null;
 
   function processBatch() {
-    const batchSize = 500;
-    const take = Math.min(
-      batchSize,
-      count - completedInThisRun
-    );
+    const take = Math.min(500, count - completed);
 
     for (let i = 0; i < take; i++) {
-      const result = parameters.n <= 30
-        ? simulateBySorting(
-            parameters.n,
-            parameters.distribution
-          )
-        : simulateFast(
-            parameters.n,
-            parameters.distribution
-          );
+      lastSample = currentN <= 30
+        ? simulateBySorting(currentN)
+        : simulateFast(currentN);
 
-      data.min.push(result.min);
-      data.median.push(result.median);
-      data.max.push(result.max);
-      data.range.push(result.max - result.min);
-
-      last = result;
+      lastNormal = appendResult(lastSample);
     }
 
-    completedInThisRun += take;
+    completed += take;
 
-    if (completedInThisRun < count) {
+    if (completed < count) {
       statusEl.textContent =
-        `正在模拟：本次已完成 ` +
-        `${completedInThisRun.toLocaleString()} / ` +
+        `正在模拟：本次已完成 ${completed.toLocaleString()} / ` +
         `${count.toLocaleString()} 轮……`;
 
       setTimeout(processBatch, 0);
       return;
     }
 
-    if (last.sorted !== null) {
+    if (lastSample.sorted !== null) {
       latestEl.textContent =
-        "最近一轮，排序后的样本：" +
-        last.sorted.map(x => x.toFixed(4)).join("，");
+        "最近一轮的均匀样本（已排序）：" +
+        lastSample.sorted.map(x => x.toFixed(4)).join("，") +
+        "；正态栏由这组样本经 Φ⁻¹ 变换得到。";
     } else {
       latestEl.textContent =
-        "最近一轮：" +
-        `最小值 ${last.min.toFixed(5)}；` +
-        `中间次序统计量 ${last.median.toFixed(5)}；` +
-        `最大值 ${last.max.toFixed(5)}；` +
-        `极差 ${(last.max - last.min).toFixed(5)}。` +
-        "大 n 时使用精确联合分布抽样，不生成完整样本。";
+        "最近一轮——均匀分布：" +
+        `最小值 ${lastSample.uMin.toFixed(5)}，` +
+        `中间值 ${lastSample.uMedian.toFixed(5)}，` +
+        `最大值 ${lastSample.uMax.toFixed(5)}；` +
+        "标准正态：" +
+        `最小值 ${lastNormal.nMin.toFixed(5)}，` +
+        `中间值 ${lastNormal.nMedian.toFixed(5)}，` +
+        `最大值 ${lastNormal.nMax.toFixed(5)}。`;
     }
 
     busy = false;
@@ -422,36 +394,31 @@ function runCustom() {
   if (count !== null) run(count);
 }
 
-/* ---------- 理论密度 ---------- */
+/* ==================== 理论密度 ==================== */
 
 const logFactorial = [0];
 
-for (let j = 1; j <= 10000; j++) {
-  logFactorial[j] =
-    logFactorial[j - 1] + Math.log(j);
+for (let i = 1; i <= 10000; i++) {
+  logFactorial[i] =
+    logFactorial[i - 1] + Math.log(i);
 }
 
-/*
- * 标准正态极差的理论密度：
- *
- * f_R(r) = n(n-1) ∫ φ(t)φ(t+r)
- *          [Φ(t+r)-Φ(t)]^(n-2) dt, r > 0。
- *
- * 这里对 t 使用复合 Simpson 法数值积分。
- */
 function normalRangeDensity(r, n) {
   if (r <= 0) return 0;
 
+  // f_R(r) = n(n−1)∫φ(t)φ(t+r)
+  //          [Φ(t+r)−Φ(t)]^(n−2) dt
+  // 用复合 Simpson 法进行数值积分。
   const left = -9;
   const right = 9;
-  const segments = 160; // Simpson 法要求偶数
+  const segments = 120;
   const step = (right - left) / segments;
 
   function integrand(t) {
-    const probability =
-      normalCDF(t + r) - normalCDF(t);
-
-    if (probability <= 0) return 0;
+    const probability = Math.max(
+      0,
+      normalCDF(t + r) - normalCDF(t)
+    );
 
     return (
       normalPDF(t) *
@@ -470,10 +437,10 @@ function normalRangeDensity(r, n) {
   return n * (n - 1) * sum * step / 3;
 }
 
-function density(type, x, n, distribution) {
+function theoreticalDensity(dist, type, x, n) {
   const k = Math.floor((n + 1) / 2);
 
-  if (distribution === "uniform") {
+  if (dist === "u") {
     if (x < 0 || x > 1) return 0;
 
     if (type === "min") {
@@ -485,34 +452,27 @@ function density(type, x, n, distribution) {
     }
 
     if (type === "range") {
-      return x <= 0 || x >= 1
-        ? 0
-        : n * (n - 1) *
-          Math.pow(x, n - 2) * (1 - x);
+      return n * (n - 1) *
+        Math.pow(x, n - 2) * (1 - x);
     }
   }
 
-  if (distribution === "normal" && type === "range") {
+  if (dist === "n" && type === "range") {
     return normalRangeDensity(x, n);
   }
 
-  const cdf = distribution === "normal"
-    ? normalCDF(x)
-    : x;
-
-  const pdf = distribution === "normal"
-    ? normalPDF(x)
-    : 1;
+  const F = dist === "u" ? x : normalCDF(x);
+  const f = dist === "u" ? 1 : normalPDF(x);
 
   if (type === "min") {
-    return n * Math.pow(1 - cdf, n - 1) * pdf;
+    return n * Math.pow(1 - F, n - 1) * f;
   }
 
   if (type === "max") {
-    return n * Math.pow(cdf, n - 1) * pdf;
+    return n * Math.pow(F, n - 1) * f;
   }
 
-  if (cdf <= 0 || cdf >= 1) return 0;
+  if (F <= 0 || F >= 1) return 0;
 
   const logCoefficient =
     logFactorial[n] -
@@ -521,15 +481,15 @@ function density(type, x, n, distribution) {
 
   return Math.exp(
     logCoefficient +
-    (k - 1) * Math.log(cdf) +
-    (n - k) * Math.log1p(-cdf)
-  ) * pdf;
+    (k - 1) * Math.log(F) +
+    (n - k) * Math.log1p(-F)
+  ) * f;
 }
 
-/* ---------- 图表 ---------- */
+/* ==================== 绘图 ==================== */
 
-function chartDomain(type, n, distribution) {
-  if (distribution === "uniform") {
+function chartDomain(dist, type, n) {
+  if (dist === "u") {
     if (n <= 30) return [0, 1];
 
     if (type === "min") {
@@ -558,19 +518,22 @@ function chartDomain(type, n, distribution) {
   const extremeSD = 1 / (n * normalPDF(q));
 
   if (type === "min") {
-    return [-q - 5 * extremeSD,
-            -q + 5 * extremeSD];
+    return [
+      -q - 5 * extremeSD,
+      -q + 5 * extremeSD
+    ];
   }
 
   if (type === "max") {
-    return [q - 5 * extremeSD,
-            q + 5 * extremeSD];
+    return [
+      q - 5 * extremeSD,
+      q + 5 * extremeSD
+    ];
   }
 
   if (type === "range") {
     const center = 2 * q;
-    const halfWidth =
-      6 * Math.SQRT2 * extremeSD;
+    const halfWidth = 6 * Math.SQRT2 * extremeSD;
 
     return [
       Math.max(0, center - halfWidth),
@@ -582,27 +545,27 @@ function chartDomain(type, n, distribution) {
   const p = k / (n + 1);
   const center = normalQuantile(p);
 
-  const uniformVariance =
+  const variance =
     k * (n - k + 1) /
     ((n + 1) ** 2 * (n + 2));
 
-  const sd =
-    Math.sqrt(uniformVariance) /
-    normalPDF(center);
+  const sd = Math.sqrt(variance) / normalPDF(center);
 
-  return [center - 5 * sd, center + 5 * sd];
+  return [
+    center - 5 * sd,
+    center + 5 * sd
+  ];
 }
 
-function formatTick(x, domainWidth) {
+function formatTick(x, span) {
   if (Math.abs(x) < 1e-12) x = 0;
 
-  if (domainWidth < 0.02) return x.toFixed(4);
-  if (domainWidth < 0.2) return x.toFixed(3);
+  if (span < 0.02) return x.toFixed(4);
+  if (span < 0.2) return x.toFixed(3);
   return x.toFixed(2);
 }
 
-function drawChart(canvas, values, type, parameters) {
-  const { n, distribution } = parameters;
+function drawChart(canvas, values, dist, type, n) {
   const ctx = canvas.getContext("2d");
   const width = canvas.width;
   const height = canvas.height;
@@ -617,13 +580,11 @@ function drawChart(canvas, values, type, parameters) {
   const plotWidth = width - plot.left - plot.right;
   const plotHeight = height - plot.top - plot.bottom;
 
-  const [lo, hi] = chartDomain(
-    type, n, distribution
-  );
-
-  const domainWidth = hi - lo;
+  const [lo, hi] = chartDomain(dist, type, n);
+  const span = hi - lo;
   const bins = 35;
-  const binWidth = domainWidth / bins;
+  const binWidth = span / bins;
+
   const counts = Array(bins).fill(0);
 
   for (const value of values) {
@@ -637,25 +598,23 @@ function drawChart(canvas, values, type, parameters) {
     counts[index]++;
   }
 
-  // 放大横轴时，仍以全部实验次数为分母。
+  // 即使放大横轴，分母仍是全部模拟次数。
   const histogram = counts.map(count =>
     values.length
       ? count / (values.length * binWidth)
       : 0
   );
 
-  /*
-   * 先计算理论曲线，避免标准正态极差的数值积分
-   * 在求纵轴范围和画线时重复执行。
-   */
-  const curvePoints = 180;
   const theoretical = [];
+  const pointCount = dist === "n" && type === "range"
+    ? 110
+    : 240;
 
   let maxY = Math.max(1, ...histogram);
 
-  for (let i = 0; i <= curvePoints; i++) {
-    const x = lo + domainWidth * i / curvePoints;
-    const y = density(type, x, n, distribution);
+  for (let i = 0; i <= pointCount; i++) {
+    const x = lo + span * i / pointCount;
+    const y = theoreticalDensity(dist, type, x, n);
 
     theoretical.push({ x, y });
     maxY = Math.max(maxY, y);
@@ -664,12 +623,10 @@ function drawChart(canvas, values, type, parameters) {
   maxY *= 1.1;
 
   const xPixel = x =>
-    plot.left +
-    (x - lo) / domainWidth * plotWidth;
+    plot.left + (x - lo) / span * plotWidth;
 
   const yPixel = y =>
-    plot.top + plotHeight -
-    y / maxY * plotHeight;
+    plot.top + plotHeight - y / maxY * plotHeight;
 
   ctx.clearRect(0, 0, width, height);
   ctx.font = "12px system-ui, sans-serif";
@@ -690,7 +647,7 @@ function drawChart(canvas, values, type, parameters) {
     ctx.fillText(yValue.toFixed(1), 4, py + 4);
   }
 
-  // 经验直方图。
+  // 经验密度直方图。
   ctx.fillStyle = "rgba(37, 99, 235, 0.48)";
 
   for (let i = 0; i < bins; i++) {
@@ -706,7 +663,7 @@ function drawChart(canvas, values, type, parameters) {
     );
   }
 
-  // 理论曲线。
+  // 理论密度曲线。
   ctx.beginPath();
   ctx.strokeStyle = "#ea580c";
   ctx.lineWidth = 3;
@@ -721,7 +678,7 @@ function drawChart(canvas, values, type, parameters) {
 
   ctx.stroke();
 
-  // 横轴。
+  // 横轴及刻度。
   ctx.strokeStyle = "#94a3b8";
   ctx.lineWidth = 1;
   ctx.beginPath();
@@ -733,124 +690,116 @@ function drawChart(canvas, values, type, parameters) {
   ctx.font = "11px system-ui, sans-serif";
 
   for (let i = 0; i <= 4; i++) {
-    const x = lo + domainWidth * i / 4;
-    const label = formatTick(x, domainWidth);
+    const x = lo + span * i / 4;
+    const label = formatTick(x, span);
     const textWidth = ctx.measureText(label).width;
 
     ctx.fillText(
       label,
       Math.min(
         width - plot.right - textWidth,
-        Math.max(
-          plot.left,
-          xPixel(x) - textWidth / 2
-        )
+        Math.max(plot.left, xPixel(x) - textWidth / 2)
       ),
       height - 12
     );
   }
 }
 
-/* ---------- 文字和事件 ---------- */
+/* ==================== 更新理论表格与页面 ==================== */
 
-function updateLabels(parameters) {
-  const { n, distribution } = parameters;
+function setText(id, text) {
+  document.getElementById(id).textContent = text;
+}
+
+function updateTheory(n) {
   const k = Math.floor((n + 1) / 2);
 
-  document.getElementById("median-title").innerHTML =
-    n % 2 === 0
-      ? `较小的中间观测值 X<sub>(${k})</sub>`
-      : `中位数 X<sub>(${k})</sub>`;
+  const medianLabel = n % 2 === 0
+    ? `较小的中间观测值 X(${k})`
+    : `中位数 X(${k})`;
 
-  if (distribution === "normal") {
-    document.getElementById("formula-min").textContent =
-      "f(x) = n[1 − Φ(x)]^(n−1) φ(x)";
+  setText("theory-median-title", medianLabel);
+  setText("chart-u-median-title", medianLabel);
+  setText("chart-n-median-title", medianLabel);
 
-    document.getElementById("formula-median").textContent =
-      `f(x) = n!/[(${k - 1})!(${n - k})!] · ` +
-      `Φ(x)^${k - 1}[1−Φ(x)]^${n - k} φ(x)`;
+  setText(
+    "theory-u-min",
+    `f(x) = ${n}(1−x)^${n - 1}`
+  );
 
-    document.getElementById("formula-max").textContent =
-      "f(x) = nΦ(x)^(n−1) φ(x)";
+  setText(
+    "theory-n-min",
+    `f(x) = ${n}[1−Φ(x)]^${n - 1} φ(x)`
+  );
 
-    document.getElementById("formula-range").textContent =
-      "f(r) = n(n−1)∫φ(t)φ(t+r)[Φ(t+r)−Φ(t)]^(n−2)dt，r > 0";
-
-    return;
-  }
-
-  document.getElementById("formula-min").textContent =
-    `f(x) = ${n}(1−x)^${n - 1}`;
-
-  document.getElementById("formula-median").textContent =
+  setText(
+    "theory-u-median",
     n === 5
       ? "f(x) = 30x²(1−x)²"
       : `f(x) = n!/[(${k - 1})!(${n - k})!] · ` +
-        `x^${k - 1}(1−x)^${n - k}`;
+        `x^${k - 1}(1−x)^${n - k}`
+  );
 
-  document.getElementById("formula-max").textContent =
-    `f(x) = ${n}x^${n - 1}`;
+  setText(
+    "theory-n-median",
+    `f(x) = n!/[(${k - 1})!(${n - k})!] · ` +
+    `Φ(x)^${k - 1}[1−Φ(x)]^${n - k} φ(x)`
+  );
 
-  document.getElementById("formula-range").textContent =
-    `f(r) = ${n * (n - 1)}r^${n - 2}(1−r)`;
+  setText(
+    "theory-u-max",
+    `f(x) = ${n}x^${n - 1}`
+  );
+
+  setText(
+    "theory-n-max",
+    `f(x) = ${n}Φ(x)^${n - 1} φ(x)`
+  );
+
+  setText(
+    "theory-u-range",
+    `f(r) = ${n * (n - 1)}r^${n - 2}(1−r)`
+  );
+
+  setText(
+    "theory-n-range",
+    "f(r) = n(n−1)∫φ(t)φ(t+r)" +
+    "[Φ(t+r)−Φ(t)]^(n−2)dt"
+  );
 }
 
 function render() {
-  const parameters = currentParameters;
-  const completed = data.min.length;
-
-  const distributionName =
-    parameters.distribution === "normal"
-      ? "标准正态 N(0,1)"
-      : "Uniform(0,1)";
+  const completed = results.u.min.length;
 
   statusEl.textContent =
-    `分布：${distributionName}；` +
-    `n = ${parameters.n}；` +
-    `随机种子 = ${parameters.seed}；` +
-    `累计完成 ${completed.toLocaleString()} 轮实验。` +
+    `n = ${currentN}；随机种子 = ${currentSeed}；` +
+    `两栏各累计完成 ${completed.toLocaleString()} 轮实验。` +
     (
-      parameters.n > 30
-        ? " 大 n 使用精确联合分布抽样；图表横轴按需放大。"
+      currentN > 30
+        ? " 大 n 采用精确联合分布抽样，横轴按需放大。"
         : ""
     );
 
-  updateLabels(parameters);
+  updateTheory(currentN);
 
-  for (const type of ["min", "median", "max", "range"]) {
-    drawChart(
-      document.getElementById(`chart-${type}`),
-      data[type],
-      type,
-      parameters
-    );
+  for (const dist of DISTRIBUTIONS) {
+    for (const type of TYPES) {
+      drawChart(
+        document.getElementById(`chart-${dist}-${type}`),
+        results[dist][type],
+        dist,
+        type,
+        currentN
+      );
+    }
   }
 }
 
 runButton.addEventListener("click", runCustom);
+onceButton.addEventListener("click", () => run(1));
+resetButton.addEventListener("click", resetFromInputs);
 
-onceButton.addEventListener("click", () => {
-  run(1);
-});
-
-resetButton.addEventListener(
-  "click",
-  resetFromInputs
-);
-
-distributionInput.addEventListener(
-  "change",
-  resetFromInputs
-);
-
-nInput.addEventListener(
-  "change",
-  resetFromInputs
-);
-
-seedInput.addEventListener(
-  "change",
-  resetFromInputs
-);
+nInput.addEventListener("change", resetFromInputs);
+seedInput.addEventListener("change", resetFromInputs);
 
 resetFromInputs();
