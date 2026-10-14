@@ -11,122 +11,87 @@
   <div class="container">
     <h1>Simulation Activity: Uniform Order Statistics</h1>
             <a class="back-link" href="../index.html">← 返回 Demo 首页</a>
-    <p class="muted">
-      比较最小值、中间次序统计量、最大值及极差的模拟分布与理论密度。
+  <p class="muted">
+    从所选分布抽样，比较最小值、中间次序统计量、最大值和极差的模拟结果与理论密度。
+  </p>
+
+  <section class="panel">
+    <div class="controls">
+      <label for="distribution">抽样分布：</label>
+      <select id="distribution">
+        <option value="uniform">Uniform(0, 1)</option>
+        <option value="normal">标准正态 N(0, 1)</option>
+      </select>
+
+      <label for="sampleSize">样本量 n：</label>
+      <input id="sampleSize" type="number" min="3" max="10000"
+             step="1" value="5">
+
+      <label for="simulationCount">模拟次数 B：</label>
+      <input id="simulationCount" type="number" min="1" max="20000"
+             step="1" value="1000">
+
+      <label for="seedInput">随机种子：</label>
+      <input id="seedInput" type="number" min="0" max="4294967295"
+             step="1" value="2026">
+
+      <button id="runButton" type="button">运行 B 次</button>
+      <button id="onceButton" type="button">实验 1 次</button>
+      <button id="resetButton" type="button" class="secondary">
+        重置并使用当前参数
+      </button>
+    </div>
+
+    <p class="hint">
+      n：3–10000；每次运行的 B：1–20000。
+      偶数 n 时使用较小的中间观测值 X<sub>(n/2)</sub>。
+      重复点击“运行 B 次”会累加实验结果。
     </p>
 
-    <section class="panel" aria-label="模拟设置">
-      <div class="controls">
-        <label for="sampleSize">样本量 n：</label>
-        <input
-          id="sampleSize"
-          type="number"
-          min="3"
-          max="10000"
-          step="1"
-          value="5"
-        >
+    <div id="status" class="status" role="status"></div>
+    <div id="latest" class="sample"></div>
 
-        <label for="simulationCount">模拟次数 B：</label>
-        <input
-          id="simulationCount"
-          type="number"
-          min="1"
-          max="20000"
-          step="1"
-          value="1000"
-        >
+    <div class="legend">
+      <span><i class="swatch"></i>模拟直方图（密度）</span>
+      <span><i class="line"></i>理论密度</span>
+    </div>
+  </section>
 
-        <label for="seedInput">随机种子：</label>
-        <input
-          id="seedInput"
-          type="number"
-          min="0"
-          max="4294967295"
-          step="1"
-          value="2026"
-        >
+  <section class="grid">
+    <article class="card">
+      <h2>最小值 X<sub>(1)</sub></h2>
+      <canvas id="chart-min" width="540" height="290"></canvas>
+      <p id="formula-min" class="formula"></p>
+    </article>
 
-        <button id="runButton" type="button">运行 B 次</button>
-        <button id="onceButton" type="button">实验 1 次</button>
-        <button id="resetButton" class="secondary" type="button">
-          重置并使用当前参数
-        </button>
-      </div>
+    <article class="card">
+      <h2 id="median-title">中位数 X<sub>(3)</sub></h2>
+      <canvas id="chart-median" width="540" height="290"></canvas>
+      <p id="formula-median" class="formula"></p>
+    </article>
 
-      <p class="hint">
-        n 可设为 3–10000；每次运行的 B 可设为 1–20000。
-        偶数 n 时取较小的中间观测值 X(n/2)。
-        修改 n 或种子后，运行时会自动重置旧结果。
-      </p>
+    <article class="card">
+      <h2>最大值 X<sub>(n)</sub></h2>
+      <canvas id="chart-max" width="540" height="290"></canvas>
+      <p id="formula-max" class="formula"></p>
+    </article>
 
-      <div id="status" class="status" role="status" aria-live="polite"></div>
-      <div id="latest" class="sample"></div>
+    <article class="card">
+      <h2>极差 R = X<sub>(n)</sub> − X<sub>(1)</sub></h2>
+      <canvas id="chart-range" width="540" height="290"></canvas>
+      <p id="formula-range" class="formula"></p>
+    </article>
+  </section>
 
-      <div class="legend">
-        <span><span class="swatch"></span>模拟直方图（密度）</span>
-        <span><span class="line"></span>理论密度</span>
-      </div>
-    </section>
-
-    <section class="grid" aria-label="模拟结果图表">
-      <article class="card">
-        <h2>最小值 X<sub>(1)</sub></h2>
-        <canvas
-          id="chart-min"
-          width="540"
-          height="300"
-          aria-label="最小值的模拟直方图与理论密度"
-          role="img"
-        ></canvas>
-        <p id="formula-min" class="formula"></p>
-      </article>
-
-      <article class="card">
-        <h2 id="median-title">中位数 X<sub>(3)</sub></h2>
-        <canvas
-          id="chart-median"
-          width="540"
-          height="300"
-          aria-label="中间次序统计量的模拟直方图与理论密度"
-          role="img"
-        ></canvas>
-        <p id="formula-median" class="formula"></p>
-      </article>
-
-      <article class="card">
-        <h2>最大值 X<sub>(n)</sub></h2>
-        <canvas
-          id="chart-max"
-          width="540"
-          height="300"
-          aria-label="最大值的模拟直方图与理论密度"
-          role="img"
-        ></canvas>
-        <p id="formula-max" class="formula"></p>
-      </article>
-
-      <article class="card">
-        <h2>极差 R = X<sub>(n)</sub> − X<sub>(1)</sub></h2>
-        <canvas
-          id="chart-range"
-          width="540"
-          height="300"
-          aria-label="极差的模拟直方图与理论密度"
-          role="img"
-        ></canvas>
-        <p id="formula-range" class="formula"></p>
-      </article>
-    </section>
-
-    <section class="panel">
-      <h2>讨论问题</h2>
-      <ol>
-        <li>哪个统计量集中在 0、1/2 和 1 附近？</li>
-        <li>增大 n 后，分布形状如何变化？</li>
-        <li>为什么大 n 时需要放大图表横轴才能看清分布？</li>
-      </ol>
-    </section>
-  </main>
+  <section class="panel">
+    <h2>讨论问题</h2>
+    <ol>
+      <li>两种分布下，最小值、中间次序统计量和最大值分别集中在哪里？</li>
+      <li>随着 n 增大，四种统计量的分布如何变化？</li>
+      <li>标准正态分布的极差与 Uniform(0, 1) 的极差有何不同？</li>
+    </ol>
+  </section>
+</main>
 </body>
 </html>
+
