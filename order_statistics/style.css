@@ -1,0 +1,168 @@
+:root {
+  --blue: #2563eb;
+  --orange: #ea580c;
+  --text: #172033;
+  --muted: #64748b;
+  --border: #dbe3ee;
+  --bg: #f5f7fb;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  padding: 24px 16px;
+  background: var(--bg);
+  color: var(--text);
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+main {
+  max-width: 1180px;
+  margin: auto;
+}
+
+h1 {
+  margin: 0 0 8px;
+  font-size: 1.7rem;
+}
+
+h2 {
+  margin: 0 0 10px;
+  font-size: 1.1rem;
+}
+
+p {
+  line-height: 1.55;
+}
+
+.muted,
+.hint,
+.status,
+.formula,
+.legend {
+  color: var(--muted);
+}
+
+.panel,
+.card {
+  background: white;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  box-shadow: 0 3px 15px rgba(22, 35, 60, 0.04);
+}
+
+.panel {
+  padding: 20px;
+  margin: 18px 0;
+}
+
+.card {
+  padding: 16px;
+}
+
+.controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 14px;
+}
+
+.controls label {
+  white-space: nowrap;
+}
+
+button,
+input {
+  font: inherit;
+  padding: 9px 12px;
+  border-radius: 8px;
+}
+
+input {
+  width: 125px;
+  border: 1px solid var(--border);
+}
+
+button {
+  border: 1px solid var(--blue);
+  color: white;
+  background: var(--blue);
+  cursor: pointer;
+}
+
+button:hover:not(:disabled) {
+  filter: brightness(0.93);
+}
+
+button.secondary {
+  background: white;
+  color: var(--blue);
+}
+
+button:disabled {
+  opacity: 0.55;
+  cursor: wait;
+}
+
+.hint,
+.status,
+.sample {
+  margin-top: 12px;
+  line-height: 1.6;
+}
+
+.sample {
+  overflow-wrap: anywhere;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+canvas {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.formula {
+  min-height: 1.4em;
+  margin: 8px 0 0;
+  font-size: 0.93rem;
+  overflow-wrap: anywhere;
+}
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 18px;
+  margin-top: 12px;
+  font-size: 0.9rem;
+}
+
+.swatch {
+  display: inline-block;
+  width: 18px;
+  height: 10px;
+  margin-right: 5px;
+  background: rgba(37, 99, 235, 0.48);
+}
+
+.line {
+  display: inline-block;
+  width: 18px;
+  margin-right: 5px;
+  border-top: 3px solid var(--orange);
+  vertical-align: middle;
+}
+
+@media (max-width: 720px) {
+  .grid {
+    grid-template-columns: 1fr;
+  }
+}
