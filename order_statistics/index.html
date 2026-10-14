@@ -2,54 +2,50 @@
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>均匀分布次序统计量：模拟实验</title>
-  <link rel="stylesheet" href="./style.css">
-  <script src="./script.js" defer></script>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>次序统计量：均匀分布与标准正态分布比较</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="script.js" defer></script>
 </head>
-<body>
   <div class="container">
-    <h1>Simulation Activity: Uniform Order Statistics</h1>
-            <a class="back-link" href="../index.html">← 返回 Demo 首页</a>
-  <p class="muted">
-    从所选分布抽样，比较最小值、中间次序统计量、最大值和极差的模拟结果与理论密度。
-  </p>
+   <a class="back-link" href="../index.html">← 返回 Demo 首页</a>
+    <h1>次序统计量：两种不同分布的比较</h1>
+    <p class="muted">
+      左：Uniform(0,1)；右：标准正态 N(0,1)。
+      两栏使用同一批均匀随机数，右栏通过标准正态分位数函数进行变换。
+    </p>
+  </header>
 
   <section class="panel">
     <div class="controls">
-      <label for="distribution">抽样分布：</label>
-      <select id="distribution">
-        <option value="uniform">Uniform(0, 1)</option>
-        <option value="normal">标准正态 N(0, 1)</option>
-      </select>
-
-      <label for="sampleSize">样本量 n：</label>
+      <label for="sampleSize">样本量 n</label>
       <input id="sampleSize" type="number" min="3" max="10000"
              step="1" value="5">
 
-      <label for="simulationCount">模拟次数 B：</label>
+      <label for="simulationCount">模拟次数 B</label>
       <input id="simulationCount" type="number" min="1" max="20000"
              step="1" value="1000">
 
-      <label for="seedInput">随机种子：</label>
+      <label for="seedInput">随机种子</label>
       <input id="seedInput" type="number" min="0" max="4294967295"
              step="1" value="2026">
 
       <button id="runButton" type="button">运行 B 次</button>
       <button id="onceButton" type="button">实验 1 次</button>
-      <button id="resetButton" type="button" class="secondary">
+      <button id="resetButton" class="secondary" type="button">
         重置并使用当前参数
       </button>
     </div>
 
     <p class="hint">
       n：3–10000；每次运行的 B：1–20000。
-      偶数 n 时使用较小的中间观测值 X<sub>(n/2)</sub>。
-      重复点击“运行 B 次”会累加实验结果。
+      再次运行会累加结果；更改 n 或种子会重置结果。
+      偶数 n 时，「中间次序统计量」取较小的中间值
+      X<sub>(n/2)</sub>。
     </p>
 
-    <div id="status" class="status" role="status"></div>
-    <div id="latest" class="sample"></div>
+    <p id="status" class="status" aria-live="polite"></p>
+    <p id="latest" class="latest"></p>
 
     <div class="legend">
       <span><i class="swatch"></i>模拟直方图（密度）</span>
@@ -57,38 +53,111 @@
     </div>
   </section>
 
-  <section class="grid">
-    <article class="card">
-      <h2>最小值 X<sub>(1)</sub></h2>
-      <canvas id="chart-min" width="540" height="290"></canvas>
-      <p id="formula-min" class="formula"></p>
-    </article>
+  <section class="panel">
+    <h2>理论密度对照</h2>
+    <p class="muted">
+      设 k = ⌊(n+1)/2⌋；
+      φ(x) 和 Φ(x) 分别为标准正态密度及分布函数。
+      下表中最小值、中间次序统计量和最大值的自变量均记为 x；
+      极差的自变量记为 r。
+    </p>
 
-    <article class="card">
-      <h2 id="median-title">中位数 X<sub>(3)</sub></h2>
-      <canvas id="chart-median" width="540" height="290"></canvas>
-      <p id="formula-median" class="formula"></p>
-    </article>
+    <div class="table-scroll">
+      <table>
+        <thead>
+          <tr>
+            <th>统计量</th>
+            <th>Uniform(0,1)</th>
+            <th>标准正态 N(0,1)</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <th>最小值 X<sub>(1)</sub></th>
+            <td id="theory-u-min"></td>
+            <td id="theory-n-min"></td>
+          </tr>
+          <tr>
+            <th id="theory-median-title">中间次序统计量</th>
+            <td id="theory-u-median"></td>
+            <td id="theory-n-median"></td>
+          </tr>
+          <tr>
+            <th>最大值 X<sub>(n)</sub></th>
+            <td id="theory-u-max"></td>
+            <td id="theory-n-max"></td>
+          </tr>
+          <tr>
+            <th>极差 R</th>
+            <td id="theory-u-range"></td>
+            <td id="theory-n-range"></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
 
-    <article class="card">
-      <h2>最大值 X<sub>(n)</sub></h2>
-      <canvas id="chart-max" width="540" height="290"></canvas>
-      <p id="formula-max" class="formula"></p>
-    </article>
-
-    <article class="card">
-      <h2>极差 R = X<sub>(n)</sub> − X<sub>(1)</sub></h2>
-      <canvas id="chart-range" width="540" height="290"></canvas>
-      <p id="formula-range" class="formula"></p>
-    </article>
+    <p class="hint">
+      均匀分布的前三个密度仅在 0 ≤ x ≤ 1 上成立；
+      均匀分布的极差密度仅在 0 ≤ r ≤ 1 上成立。
+      标准正态的前三个密度定义在整个实数轴上，极差满足 r &gt; 0。
+    </p>
   </section>
 
   <section class="panel">
-    <h2>讨论问题</h2>
+    <h2>模拟结果与理论曲线</h2>
+    <p class="muted">
+      每一行比较同一种统计量。样本量较大时，各图自动放大到主要密度区域；
+      请留意两栏的横轴刻度不同。
+    </p>
+
+    <div class="comparison-grid">
+      <div class="column-heading">Uniform(0,1)</div>
+      <div class="column-heading">标准正态 N(0,1)</div>
+
+      <article class="card">
+        <h3>最小值 X<sub>(1)</sub></h3>
+        <canvas id="chart-u-min" width="520" height="290"></canvas>
+      </article>
+      <article class="card">
+        <h3>最小值 X<sub>(1)</sub></h3>
+        <canvas id="chart-n-min" width="520" height="290"></canvas>
+      </article>
+
+      <article class="card">
+        <h3 id="chart-u-median-title">中间次序统计量</h3>
+        <canvas id="chart-u-median" width="520" height="290"></canvas>
+      </article>
+      <article class="card">
+        <h3 id="chart-n-median-title">中间次序统计量</h3>
+        <canvas id="chart-n-median" width="520" height="290"></canvas>
+      </article>
+
+      <article class="card">
+        <h3>最大值 X<sub>(n)</sub></h3>
+        <canvas id="chart-u-max" width="520" height="290"></canvas>
+      </article>
+      <article class="card">
+        <h3>最大值 X<sub>(n)</sub></h3>
+        <canvas id="chart-n-max" width="520" height="290"></canvas>
+      </article>
+
+      <article class="card">
+        <h3>极差 R</h3>
+        <canvas id="chart-u-range" width="520" height="290"></canvas>
+      </article>
+      <article class="card">
+        <h3>极差 R</h3>
+        <canvas id="chart-n-range" width="520" height="290"></canvas>
+      </article>
+    </div>
+  </section>
+
+  <section class="panel">
+    <h2>观察与讨论</h2>
     <ol>
-      <li>两种分布下，最小值、中间次序统计量和最大值分别集中在哪里？</li>
-      <li>随着 n 增大，四种统计量的分布如何变化？</li>
-      <li>标准正态分布的极差与 Uniform(0, 1) 的极差有何不同？</li>
+      <li>为什么两栏的中间次序统计量都集中在各自分布的中心？</li>
+      <li>随着 n 增大，均匀分布与正态分布的最大值有何不同？</li>
+      <li>为什么均匀分布的极差趋近于 1，而正态分布的极差没有这一上界？</li>
     </ol>
   </section>
 </main>
