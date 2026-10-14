@@ -75,31 +75,38 @@ p {
 }
 
 button,
-input {
+input,
+select {
   font: inherit;
   padding: 9px 12px;
   border-radius: 8px;
 }
 
+input,
+select {
+  border: 1px solid var(--border);
+  background: white;
+  color: var(--text);
+}
+
 input {
   width: 125px;
-  border: 1px solid var(--border);
 }
 
 button {
   border: 1px solid var(--blue);
-  color: white;
   background: var(--blue);
+  color: white;
   cursor: pointer;
-}
-
-button:hover:not(:disabled) {
-  filter: brightness(0.93);
 }
 
 button.secondary {
   background: white;
   color: var(--blue);
+}
+
+button:hover:not(:disabled) {
+  filter: brightness(0.93);
 }
 
 button:disabled {
