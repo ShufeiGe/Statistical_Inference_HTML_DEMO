@@ -30,19 +30,22 @@ h1 {
 }
 
 h2 {
+  margin: 0 0 12px;
+  font-size: 1.15rem;
+}
+
+h3 {
   margin: 0 0 10px;
-  font-size: 1.1rem;
+  font-size: 1rem;
 }
 
 p {
-  line-height: 1.55;
+  line-height: 1.6;
 }
 
 .muted,
 .hint,
-.status,
-.formula,
-.legend {
+.status {
   color: var(--muted);
 }
 
@@ -51,7 +54,6 @@ p {
   background: white;
   border: 1px solid var(--border);
   border-radius: 14px;
-  box-shadow: 0 3px 15px rgba(22, 35, 60, 0.04);
 }
 
 .panel {
@@ -60,14 +62,15 @@ p {
 }
 
 .card {
-  padding: 16px;
+  padding: 15px;
+  min-width: 0;
 }
 
 .controls {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 10px 14px;
+  gap: 10px 12px;
 }
 
 .controls label {
@@ -75,38 +78,32 @@ p {
 }
 
 button,
-input,
-select {
+input {
   font: inherit;
-  padding: 9px 12px;
+  padding: 9px 11px;
   border-radius: 8px;
 }
 
-input,
-select {
-  border: 1px solid var(--border);
-  background: white;
-  color: var(--text);
-}
-
 input {
-  width: 125px;
+  width: 120px;
+  color: var(--text);
+  border: 1px solid var(--border);
 }
 
 button {
-  border: 1px solid var(--blue);
-  background: var(--blue);
   color: white;
+  background: var(--blue);
+  border: 1px solid var(--blue);
   cursor: pointer;
 }
 
 button.secondary {
-  background: white;
   color: var(--blue);
+  background: white;
 }
 
 button:hover:not(:disabled) {
-  filter: brightness(0.93);
+  filter: brightness(0.94);
 }
 
 button:disabled {
@@ -116,31 +113,11 @@ button:disabled {
 
 .hint,
 .status,
-.sample {
-  margin-top: 12px;
-  line-height: 1.6;
+.latest {
+  margin: 12px 0 0;
 }
 
-.sample {
-  overflow-wrap: anywhere;
-}
-
-.grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 16px;
-}
-
-canvas {
-  display: block;
-  width: 100%;
-  height: auto;
-}
-
-.formula {
-  min-height: 1.4em;
-  margin: 8px 0 0;
-  font-size: 0.93rem;
+.latest {
   overflow-wrap: anywhere;
 }
 
@@ -148,7 +125,8 @@ canvas {
   display: flex;
   flex-wrap: wrap;
   gap: 18px;
-  margin-top: 12px;
+  margin-top: 14px;
+  color: var(--muted);
   font-size: 0.9rem;
 }
 
@@ -168,8 +146,81 @@ canvas {
   vertical-align: middle;
 }
 
+.table-scroll {
+  overflow-x: auto;
+}
+
+table {
+  width: 100%;
+  min-width: 760px;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+
+th,
+td {
+  padding: 13px 12px;
+  border: 1px solid var(--border);
+  text-align: left;
+  vertical-align: top;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+
+thead th {
+  background: #eef4ff;
+}
+
+thead th:first-child,
+tbody th {
+  width: 21%;
+}
+
+tbody td {
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  font-size: 0.9rem;
+}
+
+.comparison-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.column-heading {
+  padding: 11px 14px;
+  border-radius: 9px;
+  color: #1e40af;
+  background: #eaf1ff;
+  font-weight: 700;
+  text-align: center;
+}
+
+canvas {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+ol {
+  line-height: 1.8;
+}
+
 @media (max-width: 720px) {
-  .grid {
+  .comparison-grid {
     grid-template-columns: 1fr;
+  }
+
+  /* 窄屏下仍按“均匀图、正态图”的顺序逐对比较。 */
+  .column-heading {
+    display: none;
+  }
+
+  .comparison-grid .card:nth-of-type(odd) {
+    border-left: 4px solid var(--blue);
+  }
+
+  .comparison-grid .card:nth-of-type(even) {
+    border-left: 4px solid var(--orange);
   }
 }
